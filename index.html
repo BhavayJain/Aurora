@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Kitchen | Fine Dining Experience</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- GSAP & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            100: '#F9F1D8',
+                            300: '#EEDC9A',
+                            500: '#D4AF37', // Classic Gold
+                            600: '#B4941F',
+                            900: '#5C4B14',
+                        },
+                        dark: {
+                            800: '#1a1a1a',
+                            900: '#0f0f0f',
+                            950: '#050505',
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Lato"', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #050505;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            cursor: none; /* Custom cursor */
+        }
+
+        /* Custom Cursor */
+        #cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #D4AF37;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background-color 0.3s;
+            mix-blend-mode: difference;
+        }
+        #cursor.hovered {
+            width: 50px;
+            height: 50px;
+            background-color: rgba(212, 175, 55, 0.2);
+            border-color: transparent;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Text Selection */
+        ::selection {
+            background: #D4AF37;
+            color: #000;
+        }
+
+        /* Loader */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease;
+        }
+
+        /* 3D Canvas */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Scroll Content Wrapper */
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+        }
+
+        .section-padding {
+            padding-top: 100px;
+            padding-bottom: 100px;
+        }
+
+        /* Menu Carousel Styles */
+        .menu-item.active {
+            transform: scale(1.1);
+            opacity: 1;
+            filter: blur(0px);
+        }
+        .menu-item {
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 0.4;
+            filter: blur(2px);
+        }
+
+        /* Input styling */
+        input, select {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 10px 0;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            border-bottom: 1px solid #D4AF37;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f0f0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D4AF37;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Custom Cursor -->
+    <div id="cursor"></div>
+
+    <!-- Loader -->
+    <div id="loader">
+        <div class="text-center">
+            <h1 class="font-serif text-4xl text-gold-500 tracking-widest animate-pulse">AURORA</h1>
+            <p class="text-xs text-gray-500 mt-2 tracking-[0.3em]">LOADING EXPERIENCE</p>
+        </div>
+    </div>
+
+    <!-- 3D Background Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        
+        <!-- Navigation -->
+        <nav class="fixed w-full z-50 top-0 transition-all duration-300 p-6" id="navbar">
+            <div class="max-w-7xl mx-auto flex justify-between items-center glass px-8 py-4 rounded-full">
+                <a href="#" class="font-serif text-2xl font-bold text-gold-500 tracking-wider hover-trigger">AURORA</a>
+                <div class="hidden md:flex space-x-8 text-sm tracking-widest uppercase">
+                    <a href="#about" class="hover:text-gold-500 transition-colors hover-trigger">Our Story</a>
+                    <a href="#menu" class="hover:text-gold-500 transition-colors hover-trigger">Menu</a>
+                    <a href="#chefs" class="hover:text-gold-500 transition-colors hover-trigger">Chefs</a>
+                    <a href="#reservation" class="hover:text-gold-500 transition-colors hover-trigger">Reservations</a>
+                </div>
+                <button class="md:hidden text-gold-500 hover-trigger">
+                    <i data-lucide="menu"></i>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="relative h-screen flex items-center justify-center overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-dark-950/50 to-dark-950 z-0"></div>
+            
+            <div class="relative z-10 text-center px-4 max-w-4xl mx-auto mt-20">
+                <p class="text-gold-500 tracking-[0.4em] text-sm mb-4 opacity-0" id="hero-subtitle">EST. 2024</p>
+                <h1 class="font-serif text-6xl md:text-8xl lg:text-9xl font-bold mb-6 leading-tight opacity-0" id="hero-title">
+                    A Dining <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-gold-300 to-gold-600 italic">Experience</span>
+                </h1>
+                <p class="text-gray-300 text-lg md:text-xl font-light tracking-wide mb-10 max-w-2xl mx-auto opacity-0" id="hero-text">
+                    Where culinary art meets immersive dining. Taste the extraordinary.
+                </p>
+                <div class="flex flex-col md:flex-row gap-6 justify-center opacity-0" id="hero-cta">
+                    <a href="#menu" class="group relative px-8 py-4 bg-gold-600 text-dark-950 font-bold tracking-wider overflow-hidden rounded-sm hover-trigger">
+                        <span class="relative z-10 group-hover:text-white transition-colors">VIEW MENU</span>
+                        <div class="absolute inset-0 bg-dark-900 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></div>
+                    </a>
+                    <a href="#reservation" class="px-8 py-4 border border-gold-500 text-gold-500 font-bold tracking-wider hover:bg-gold-500 hover:text-dark-950 transition-all duration-300 rounded-sm hover-trigger">
+                        BOOK A TABLE
+                    </a>
+                </div>
+            </div>
+
+            <!-- Scroll Indicator -->
+            <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce text-gold-500/50">
+                <i data-lucide="chevron-down" class="w-8 h-8"></i>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section-padding relative bg-dark-950">
+            <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                <div class="order-2 md:order-1 relative">
+                    <!-- 3D Placeholder for Chef/Interior -->
+                    <div class="relative h-[500px] w-full rounded-2xl overflow-hidden glass-card p-2 group">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1974&auto=format&fit=crop')] bg-cover bg-center opacity-60 group-hover:scale-105 transition-transform duration-700"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-transparent"></div>
+                        <div class="absolute bottom-8 left-8">
+                            <h3 class="font-serif text-3xl text-white">The Art of Cuisine</h3>
+                        </div>
+                    </div>
+                    <!-- Decorative Element -->
+                    <div class="absolute -top-10 -left-10 w-40 h-40 bg-gold-500/10 rounded-full blur-3xl"></div>
+                </div>
+                
+                <div class="order-1 md:order-2 space-y-6">
+                    <h4 class="text-gold-500 tracking-widest text-sm uppercase">Our Philosophy</h4>
+                    <h2 class="font-serif text-4xl md:text-5xl leading-tight">
+                        Crafted with Passion, <br> Served with <span class="italic text-gold-300">Elegance</span>
+                    </h2>
+                    <p class="text-gray-400 leading-relaxed text-lg">
+                        At Aurora Kitchen, we believe dining is not just about sustenance, but about experience. Our chefs combine modern gastronomy with timeless recipes to craft unforgettable flavors. Every dish is designed to delight both the palate and the eyes.
+                    </p>
+                    <p class="text-gray-400 leading-relaxed">
+                        We source only the finest local ingredients, ensuring that every bite tells a story of quality and dedication. From the ambient lighting to the plating of our signature dishes, every detail is meticulously curated.
+                    </p>
+                    <div class="pt-4 flex gap-8">
+                        <div>
+                            <span class="block text-3xl font-serif text-gold-500">15+</span>
+                            <span class="text-xs text-gray-500 uppercase tracking-wider">Years Experience</span>
+                        </div>
+                        <div>
+                            <span class="block text-3xl font-serif text-gold-500">50+</span>
+                            <span class="text-xs text-gray-500 uppercase tracking-wider">Unique Dishes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive 3D Menu Section -->
+        <section id="menu" class="section-padding bg-dark-900 relative overflow-hidden">
+            <!-- Background Glow -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gold-600/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+            <div class="max-w-7xl mx-auto px-6 relative z-10">
+                <div class="text-center mb-16">
+                    <h2 class="font-serif text-5xl mb-4">Culinary <span class="text-gold-500">Masterpieces</span></h2>
+                    <p class="text-gray-400">Explore our seasonal selection</p>
+                </div>
+
+                <!-- 3D Carousel Container -->
+                <div class="relative h-[500px] flex items-center justify-center perspective-1000">
+                    <div id="menu-carousel" class="relative w-full h-full flex items-center justify-center">
+                        <!-- Menu items injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Menu Controls -->
+                <div class="flex justify-center gap-4 mt-8">
+                    <button id="prev-menu" class="p-3 rounded-full border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-dark-950 transition-all hover-trigger">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <button id="next-menu" class="p-3 rounded-full border border-gold-500/30 text-gold-500 hover:bg-gold-500 hover:text-dark-950 transition-all hover-trigger">
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chef Section -->
+        <section id="chefs" class="section-padding bg-dark-950">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="flex flex-col md:flex-row justify-between items-end mb-12">
+                    <div>
+                        <h4 class="text-gold-500 tracking-widest text-sm uppercase mb-2">The Masters</h4>
+                        <h2 class="font-serif text-4xl md:text-5xl">Meet Our Chefs</h2>
+                    </div>
+                    <p class="text-gray-400 max-w-md mt-4 md:mt-0 text-sm">
+                        World-renowned culinary artists dedicated to creating the perfect dining experience.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Chef 1 -->
+                    <div class="group relative h-[400px] glass-card overflow-hidden rounded-xl hover-trigger">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1583394293214-28ded15ee548?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-700 group-hover:scale-110"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/40 to-transparent opacity-90"></div>
+                        <div class="absolute bottom-0 left-0 w-full p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                            <h3 class="font-serif text-2xl text-white">Marco Rossi</h3>
+                            <p class="text-gold-500 text-sm uppercase tracking-wider mb-2">Head Chef</p>
+                            <p class="text-gray-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                                Master of modern Italian cuisine with 15 years of culinary artistry.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Chef 2 -->
+                    <div class="group relative h-[400px] glass-card overflow-hidden rounded-xl hover-trigger">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-700 group-hover:scale-110"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/40 to-transparent opacity-90"></div>
+                        <div class="absolute bottom-0 left-0 w-full p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                            <h3 class="font-serif text-2xl text-white">Elena Vora</h3>
+                            <p class="text-gold-500 text-sm uppercase tracking-wider mb-2">Pastry Chef</p>
+                            <p class="text-gray-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                                Specializes in avant-garde desserts that challenge the senses.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Chef 3 -->
+                    <div class="group relative h-[400px] glass-card overflow-hidden rounded-xl hover-trigger">
+                        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1566554273541-37a9ca77b91f?q=80&w=1000&auto=format&fit=crop')] bg-cover bg-center transition-transform duration-700 group-hover:scale-110"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/40 to-transparent opacity-90"></div>
+                        <div class="absolute bottom-0 left-0 w-full p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                            <h3 class="font-serif text-2xl text-white">Kenji Sato</h3>
+                            <p class="text-gold-500 text-sm uppercase tracking-wider mb-2">Sushi Master</p>
+                            <p class="text-gray-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                                Bringing the precision of Tokyo to the heart of the city.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Atmosphere Section -->
+        <section class="section-padding relative h-[80vh] flex items-center justify-center overflow-hidden">
+            <div class="absolute inset-0 z-0">
+                <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=2000&auto=format&fit=crop" class="w-full h-full object-cover opacity-40" alt="Atmosphere">
+                <div class="absolute inset-0 bg-dark-950/60"></div>
+            </div>
+            
+            <div class="relative z-10 text-center max-w-3xl px-6">
+                <i data-lucide="wine" class="w-12 h-12 text-gold-500 mx-auto mb-6"></i>
+                <h2 class="font-serif text-5xl md:text-6xl mb-6">Unforgettable Evenings</h2>
+                <p class="text-xl text-gray-200 font-light italic">
+                    "Step into an atmosphere designed for connection, celebration, and culinary discovery."
+                </p>
+            </div>
+        </section>
+
+        <!-- Reservation Section -->
+        <section id="reservation" class="section-padding bg-dark-900 relative">
+            <div class="max-w-4xl mx-auto px-6">
+                <div class="glass-card p-8 md:p-12 rounded-2xl relative overflow-hidden">
+                    <!-- Decorative glow -->
+                    <div class="absolute -top-24 -right-24 w-64 h-64 bg-gold-500/20 rounded-full blur-3xl"></div>
+
+                    <div class="text-center mb-10 relative z-10">
+                        <h2 class="font-serif text-4xl mb-2">Reserve Your Table</h2>
+                        <p class="text-gray-400">Book your immersive dining experience today.</p>
+                    </div>
+
+                    <form id="booking-form" class="space-y-8 relative z-10">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="group">
+                                <label class="block text-xs text-gold-500 uppercase tracking-wider mb-2">Date</label>
+                                <input type="date" class="hover-trigger">
+                            </div>
+                            <div class="group">
+                                <label class="block text-xs text-gold-500 uppercase tracking-wider mb-2">Time</label>
+                                <select class="hover-trigger">
+                                    <option>18:00</option>
+                                    <option>19:00</option>
+                                    <option>20:00</option>
+                                    <option>21:00</option>
+                                </select>
+                            </div>
+                            <div class="group">
+                                <label class="block text-xs text-gold-500 uppercase tracking-wider mb-2">Guests</label>
+                                <select class="hover-trigger">
+                                    <option>2 People</option>
+                                    <option>3 People</option>
+                                    <option>4 People</option>
+                                    <option>5+ People</option>
+                                </select>
+                            </div>
+                            <div class="group">
+                                <label class="block text-xs text-gold-500 uppercase tracking-wider mb-2">Email</label>
+                                <input type="email" placeholder="your@email.com" class="hover-trigger">
+                            </div>
+                        </div>
+                        
+                        <div class="pt-6 text-center">
+                            <button type="submit" class="relative overflow-hidden px-12 py-4 bg-gold-600 text-dark-950 font-bold tracking-widest rounded-sm hover-trigger group">
+                                <span class="relative z-10 group-hover:text-white transition-colors">CONFIRM RESERVATION</span>
+                                <div class="absolute inset-0 bg-dark-900 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-center duration-300"></div>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="bg-dark-950 pt-20 pb-10 border-t border-white/5">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                    <div class="col-span-1 md:col-span-1">
+                        <h3 class="font-serif text-2xl text-gold-500 mb-6">AURORA</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            Redefining the dining experience through culinary excellence and immersive atmosphere.
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-white font-bold uppercase tracking-wider text-sm mb-6">Location</h4>
+                        <p class="text-gray-500 text-sm">
+                            123 Gourmet Avenue<br>
+                            Culinary District, NY 10012<br>
+                            +1 (555) 123-4567
+                        </p>
+                    </div>
+
+                    <div>
+                        <h4 class="text-white font-bold uppercase tracking-wider text-sm mb-6">Hours</h4>
+                        <p class="text-gray-500 text-sm">
+                            Mon-Thu: 5pm - 10pm<br>
+                            Fri-Sat: 5pm - 11pm<br>
+                            Sun: 5pm - 9pm
+                        </p>
+                    </div>
+
+                    <div>
+                        <h4 class="text-white font-bold uppercase tracking-wider text-sm mb-6">Follow Us</h4>
+                        <div class="flex space-x-4">
+                            <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gold-500 hover:bg-gold-500 hover:text-dark-950 transition-all hover-trigger">
+                                <i data-lucide="instagram" class="w-5 h-5"></i>
+                            </a>
+                            <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gold-500 hover:bg-gold-500 hover:text-dark-950 transition-all hover-trigger">
+                                <i data-lucide="facebook" class="w-5 h-5"></i>
+                            </a>
+                            <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gold-500 hover:bg-gold-500 hover:text-dark-950 transition-all hover-trigger">
+                                <i data-lucide="twitter" class="w-5 h-5"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center">
+                    <p class="text-gray-600 text-xs">&copy; 2024 Aurora Kitchen. All rights reserved.</p>
+                    <div class="flex space-x-6 mt-4 md:mt-0">
+                        <a href="#" class="text-gray-600 text-xs hover:text-gold-500 hover-trigger">Privacy Policy</a>
+                        <a href="#" class="text-gray-600 text-xs hover:text-gold-500 hover-trigger">Terms of Service</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // --- Custom Cursor Logic ---
+        const cursor = document.getElementById('cursor');
+        const hoverTriggers = document.querySelectorAll('.hover-trigger, a, button');
+
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        hoverTriggers.forEach(trigger => {
+            trigger.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            trigger.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+
+        // --- Three.js Setup (The "Wow" Factor) ---
+        const initThreeJS = () => {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            
+            // Camera
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            // Renderer
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xD4AF37, 1, 100);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+
+            const pointLight2 = new THREE.PointLight(0xffffff, 0.5);
+            pointLight2.position.set(-5, -5, 5);
+            scene.add(pointLight2);
+
+            // --- Objects Creation ---
+            
+            // 1. The Main Plate (Torus)
+            const plateGeometry = new THREE.TorusGeometry(1.8, 0.05, 16, 100);
+            const plateMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff, 
+                roughness: 0.1, 
+                metalness: 0.8 
+            });
+            const plate = new THREE.Mesh(plateGeometry, plateMaterial);
+            scene.add(plate);
+
+            // 2. Inner Plate Detail
+            const innerPlateGeo = new THREE.CircleGeometry(1.7, 64);
+            const innerPlateMat = new THREE.MeshStandardMaterial({ 
+                color: 0xf5f5f5, 
+                roughness: 0.2,
+                side: THREE.DoubleSide
+            });
+            const innerPlate = new THREE.Mesh(innerPlateGeo, innerPlateMat);
+            innerPlate.position.z = -0.05;
+            scene.add(innerPlate);
+
+            // 3. Procedural Food (Abstract Shapes)
+            const foodGroup = new THREE.Group();
+            
+            // Main protein (Brown/Gold sphere)
+            const proteinGeo = new THREE.SphereGeometry(0.6, 32, 32);
+            const proteinMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.6 });
+            const protein = new THREE.Mesh(proteinGeo, proteinMat);
+            protein.position.y = 0.2;
+            protein.scale.set(1, 0.6, 1);
+            foodGroup.add(protein);
+
+            // Garnish (Green particles)
+            const garnishGeo = new THREE.IcosahedronGeometry(0.1, 0);
+            const garnishMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+            
+            for(let i=0; i<8; i++) {
+                const mesh = new THREE.Mesh(garnishGeo, garnishMat);
+                mesh.position.set(
+                    (Math.random() - 0.5) * 1.5,
+                    0.5 + Math.random() * 0.2,
+                    (Math.random() - 0.5) * 1.5
+                );
+                mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+                foodGroup.add(mesh);
+            }
+
+            // Sauce (Red plane slightly above plate)
+            const sauceGeo = new THREE.CircleGeometry(0.8, 32);
+            const sauceMat = new THREE.MeshStandardMaterial({ color: 0x990000, transparent: true, opacity: 0.8 });
+            const sauce = new THREE.Mesh(sauceGeo, sauceMat);
+            sauce.rotation.x = -Math.PI / 2;
+            sauce.position.y = 0.05;
+            foodGroup.add(sauce);
+
+            scene.add(foodGroup);
+
+            // 4. Floating Ingredients (Particles)
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 150;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for(let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 15;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.05,
+                color: 0xD4AF37,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particlesMesh);
+
+            // Animation Loop
+            let mouseX = 0;
+            let mouseY = 0;
+            let targetX = 0;
+            let targetY = 0;
+
+            const windowHalfX = window.innerWidth / 2;
+            const windowHalfY = window.innerHeight / 2;
+
+            document.addEventListener('mousemove', (event) => {
+                mouseX = (event.clientX - windowHalfX);
+                mouseY = (event.clientY - windowHalfY);
+            });
+
+            const clock = new THREE.Clock();
+
+            const animate = () => {
+                const elapsedTime = clock.getElapsedTime();
+
+                targetX = mouseX * 0.001;
+                targetY = mouseY * 0.001;
+
+                // Rotate Plate slowly
+                plate.rotation.y += 0.002;
+                innerPlate.rotation.y += 0.002;
+                foodGroup.rotation.y += 0.002;
+
+                // Gentle floating animation for food
+                foodGroup.position.y = Math.sin(elapsedTime * 0.5) * 0.1;
+
+                // Parallax effect based on mouse
+                plate.rotation.x += 0.05 * (targetY - plate.rotation.x);
+                plate.rotation.y += 0.05 * (targetX - plate.rotation.y);
+                
+                innerPlate.rotation.x = plate.rotation.x;
+                innerPlate.rotation.y = plate.rotation.y;
+                
+                foodGroup.rotation.x = plate.rotation.x;
+                foodGroup.rotation.y = plate.rotation.y;
+
+                // Animate particles
+                particlesMesh.rotation.y = -elapsedTime * 0.05;
+                particlesMesh.rotation.x = elapsedTime * 0.02;
+
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+            };
+
+            animate();
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // --- GSAP Animations ---
+        const initAnimations = () => {
+            gsap.registerPlugin(ScrollTrigger);
+
+            // Hero Entrance
+            const tl = gsap.timeline();
+            tl.to("#loader", { opacity: 0, duration: 1, delay: 1, onComplete: () => document.getElementById('loader').style.display = 'none' })
+              .to("#hero-subtitle", { opacity: 1, y: 0, duration: 1 }, "-=0.5")
+              .to("#hero-title", { opacity: 1, y: 0, duration: 1 }, "-=0.8")
+              .to("#hero-text", { opacity: 1, y: 0, duration: 1 }, "-=0.8")
+              .to("#hero-cta", { opacity: 1, y: 0, duration: 1 }, "-=0.8");
+
+            // Navbar Glass effect on scroll
+            ScrollTrigger.create({
+                start: "top -80",
+                end: 99999,
+                toggleClass: { className: "bg-dark-950/80 shadow-lg", targets: "#navbar" }
+            });
+
+            // About Section Reveal
+            gsap.from("#about .order-1", {
+                scrollTrigger: { trigger: "#about", start: "top 70%" },
+                x: -50, opacity: 0, duration: 1
+            });
+            
+            gsap.from("#about .order-2", {
+                scrollTrigger: { trigger: "#about", start: "top 70%" },
+                x: 50, opacity: 0, duration: 1, delay: 0.2
+            });
+
+            // Menu Section Title
+            gsap.from("#menu h2", {
+                scrollTrigger: { trigger: "#menu", start: "top 80%" },
+                y: 30, opacity: 0, duration: 1
+            });
+        };
+
+        // --- Menu Carousel Logic ---
+        const menuItems = [
+            { name: "Truffle Risotto", price: "$32", cat: "Main Course", img: "https://images.unsplash.com/photo-1633504628258-26321c257f37?q=80&w=600&auto=format&fit=crop" },
+            { name: "Wagyu Tartare", price: "$28", cat: "Starters", img: "https://images.unsplash.com/photo-1546241072-48010ad2862c?q=80&w=600&auto=format&fit=crop" },
+            { name: "Lobster Thermidor", price: "$55", cat: "Main Course", img: "https://images.unsplash.com/photo-1551248429-40975aa4de74?q=80&w=600&auto=format&fit=crop" },
+            { name: "Gold Leaf Tiramisu", price: "$18", cat: "Desserts", img: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?q=80&w=600&auto=format&fit=crop" },
+            { name: "Aurora Cocktail", price: "$22", cat: "Drinks", img: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=600&auto=format&fit=crop" }
+        ];
+
+        let currentMenuIndex = 0;
+        const carouselContainer = document.getElementById('menu-carousel');
+
+        const renderMenu = () => {
+            carouselContainer.innerHTML = '';
+            menuItems.forEach((item, index) => {
+                const el = document.createElement('div');
+                // Calculate position based on index relative to current
+                let offset = index - currentMenuIndex;
+                
+                // Handle wrapping logic for infinite feel
+                if (offset > 2) offset -= menuItems.length;
+                if (offset < -2) offset += menuItems.length;
+
+                const isActive = offset === 0;
+                
+                el.className = `menu-item absolute w-64 h-80 md:w-80 md:h-96 rounded-2xl overflow-hidden glass-card cursor-pointer hover-trigger`;
+                
+                // Apply transforms
+                const translateX = offset * 220; // Spacing
+                const translateZ = isActive ? 0 : -100;
+                const rotateY = offset * -15;
+                const scale = isActive ? 1 : 0.8;
+                const opacity = Math.abs(offset) > 2 ? 0 : (isActive ? 1 : 0.5);
+                const blur = isActive ? 0 : 4;
+
+                el.style.transform = `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
+                el.style.opacity = opacity;
+                el.style.filter = `blur(${blur}px)`;
+                el.style.zIndex = isActive ? 10 : 5 - Math.abs(offset);
+
+                el.innerHTML = `
+                    <div class="relative h-full w-full group">
+                        <img src="${item.img}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="${item.name}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/20 to-transparent"></div>
+                        <div class="absolute bottom-0 left-0 w-full p-6">
+                            <span class="text-gold-500 text-xs uppercase tracking-widest mb-1 block">${item.cat}</span>
+                            <h3 class="font-serif text-2xl text-white mb-1">${item.name}</h3>
+                            <p class="text-xl text-gold-300 font-light">${item.price}</p>
+                            
+                            <div class="h-0 group-hover:h-auto overflow-hidden transition-all duration-300 opacity-0 group-hover:opacity-100 mt-2">
+                                <p class="text-gray-300 text-xs">Fresh ingredients sourced daily. Click to view details.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Click to set active
+                el.addEventListener('click', () => {
+                    currentMenuIndex = index;
+                    renderMenu();
+                });
+
+                carouselContainer.appendChild(el);
+            });
+        };
+
+        // Menu Controls
+        document.getElementById('prev-menu').addEventListener('click', () => {
+            currentMenuIndex = (currentMenuIndex - 1 + menuItems.length) % menuItems.length;
+            renderMenu();
+        });
+        document.getElementById('next-menu').addEventListener('click', () => {
+            currentMenuIndex = (currentMenuIndex + 1) % menuItems.length;
+            renderMenu();
+        });
+
+        // Form Handling
+        document.getElementById('booking-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = '<span class="relative z-10">RESERVED!</span>';
+            btn.classList.add('bg-green-600', 'text-white');
+            btn.classList.remove('bg-gold-600', 'text-dark-950');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('bg-green-600', 'text-white');
+                btn.classList.add('bg-gold-600', 'text-dark-950');
+                e.target.reset();
+            }, 3000);
+        });
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            initThreeJS();
+            initAnimations();
+            renderMenu();
+            
+            // Refresh ScrollTrigger on load
+            setTimeout(() => {
+                ScrollTrigger.refresh();
+            }, 100);
+        });
+
+    </script>
+</body>
+</html>
